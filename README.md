@@ -14,4 +14,9 @@ Compile & Run
 
 	make run
 
+To diagnose memory leaks:
+
+	make mtrace_run
+
+Note: there are currently some leaks (but outside this C code???)
 

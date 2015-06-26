@@ -11,6 +11,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#ifdef MAPR_WC_MTRACE
+#include <mcheck.h>
+#endif
 
 int usage(char *prog, char *msg){
     if(msg != NULL ){
@@ -37,6 +40,10 @@ int main(int argc, char **argv){
     int i;
     int n_threads;
     pthread_t *threads;
+
+#ifdef MAPR_WC_MTRACE
+    mtrace();
+#endif
 
     if ( argc!=2){
         return usage(argv[0],NULL);
@@ -68,6 +75,10 @@ int main(int argc, char **argv){
           }
     }
     printf("All done.\n");
+    free(threads);
 
+#ifdef MAPR_WC_MTRACE
+    muntrace();
+#endif
     return 0;
 }

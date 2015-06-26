@@ -1,3 +1,5 @@
 .*.swp
 *.o
 mapr_wc
+mtrace_mapr_wc
+*.lst
