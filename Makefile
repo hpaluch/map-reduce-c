@@ -22,5 +22,5 @@ mtrace_run: mtrace_mapr_wc
 
 .PHONY: clean
 clean:
-	rm -f mapr_wc mapr_wc.o mtrace_mapr_wc *.lst
+	rm -f mapr_wc mtrace_mapr_wc *.o *.lst
 
