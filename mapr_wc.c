@@ -16,6 +16,10 @@
 #include <mcheck.h>
 #endif
 
+pthread_mutex_t q_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t  q_empty = PTHREAD_COND_INITIALIZER;
+
+
 struct s_queue {
     struct s_queue *next;
     char *str;
@@ -32,6 +36,9 @@ static void enqueue(char *str){
             perror("malloc s_queue - exiting");
             exit(1);
        }
+
+       pthread_mutex_lock(&q_lock);
+
        q->str = str;
        q->next = NULL;
        if ( queue != NULL ){
@@ -40,16 +47,23 @@ static void enqueue(char *str){
        } else {
            queue = q;
        }
+       pthread_mutex_unlock(&q_lock);
+       pthread_cond_signal(&q_empty);
 }
 
 static char* dequeue(){
-      /* TODO: synchronization */
+      char * str;
+      pthread_mutex_lock(&q_lock);
       while ( queue == NULL ){
-          /* TODO: sleep */
+          pthread_cond_wait(&q_empty,&q_lock);
       }
       struct s_queue *q = queue;
       queue = q->next;
-      return q->str;
+      pthread_mutex_unlock(&q_lock);
+      /* save str before free()!!! */
+      str = q->str;
+      free(q);
+      return str;
 }
 
 static int usage(char *prog, char *msg){
