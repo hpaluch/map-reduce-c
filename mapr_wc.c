@@ -16,6 +16,42 @@
 #include <mcheck.h>
 #endif
 
+struct s_queue {
+    struct s_queue *next;
+    char *str;
+};
+
+struct s_queue *queue = NULL;
+
+static void enqueue(char *str){
+       struct s_queue *q;
+       /* TODO: wait if queue full */
+       /* TODO: synchronization */
+       q = (struct s_queue*)malloc( sizeof(struct s_queue) );
+       if ( q==NULL ){
+            perror("malloc s_queue - exiting");
+            exit(1);
+       }
+       q->str = str;
+       q->next = NULL;
+       if ( queue != NULL ){
+           q->next = queue;
+           queue = q;
+       } else {
+           queue = q;
+       }
+}
+
+static char* dequeue(){
+      /* TODO: synchronization */
+      while ( queue == NULL ){
+          /* TODO: sleep */
+      }
+      struct s_queue *q = queue;
+      queue = q->next;
+      return q->str;
+}
+
 static int usage(char *prog, char *msg){
     if(msg != NULL ){
        fprintf(stderr,"ERROR: %s\n",msg);
@@ -24,6 +60,10 @@ static int usage(char *prog, char *msg){
     return 1;
 }
 
+/*
+ * count words on line string
+ * This version is used for both single-threaded and multi-threaded counting
+ */
 static int count_words(char *line){
        char *state;
        int wc = 0; /* word count */
@@ -44,6 +84,9 @@ static void *map_thread(void *arg){
 
 	printf("pid %lu, tid %lu\n",
 	       (unsigned long)pid, (unsigned long)tid);
+
+        *((int*)arg) = 1; /* TODO: pass number of words instead of 1 */
+
         return NULL;
 }
 
@@ -117,7 +160,7 @@ int main(int argc, char **argv){
 
 
     for(i=0;i<n_threads;i++){
-          if ( pthread_create( threads+i,NULL,map_thread,NULL) ){
+          if ( pthread_create( threads+i,NULL,map_thread,sums+i) ){
                perror("pthread_create");
                return 1;
           }
@@ -130,8 +173,7 @@ int main(int argc, char **argv){
                 continue;
            }
            if ( n_threads ){
-              fprintf(stderr,"Multi-threading mode not yet implemented\n");
-              return 1;
+              /* TODO put in queue */
            } else {
               total += count_words(buf);
            }
@@ -146,6 +188,10 @@ int main(int argc, char **argv){
                perror("pthread_join");
                return 1;
           }
+    }
+    /* compute total from sums (only in thread version) */
+    for(i=0;i<n_threads;i++){
+        total += sums[i];
     }
     printf("There are total %d words\n",total);
     if ( n_threads ){
