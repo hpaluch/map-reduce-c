@@ -9,6 +9,10 @@ On CentOS 7 install:
 
 	yum install binutils gcc make
 
+If you have no /var/cache/man/whatis file in system, try as root:
+
+	/etc/cron.daily/makewhatis.cron
+
 Compile & Run
 =============
 
