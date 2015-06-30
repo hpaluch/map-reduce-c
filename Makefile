@@ -1,5 +1,6 @@
-CFLAGS = -Wall -g -pthread
-LDFLAGS = -g -pthread
+CFLAGS = -Wall -g -pthread `pkg-config glib-2.0 --cflags`
+LDFLAGS = -g -pthread `pkg-config glib-2.0 --libs-only-L`
+LDLIBS = `pkg-config glib-2.0 --libs-only-l`
 
 # use 'make run RUN_THREADS=X' to override
 # temporarily set to 0 (unless thread version is implemented)

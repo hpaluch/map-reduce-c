@@ -1,6 +1,10 @@
 /* 
  * Map - Reduce WordCount using plain C
+ * Warning: this is just prototype (Proof of Concept)
  */
+
+#define _GNU_SOURCE
+#include <assert.h>
 
 #include<stdio.h>
 #include<errno.h>
@@ -12,6 +16,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <glib.h>
+
 #ifdef MAPR_WC_MTRACE
 #include <mcheck.h>
 #endif
@@ -20,49 +26,36 @@ pthread_mutex_t q_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  q_empty = PTHREAD_COND_INITIALIZER;
 
 
-struct s_queue {
-    struct s_queue *next;
-    char *str;
-};
-
-struct s_queue *queue = NULL;
+GQueue  queue = G_QUEUE_INIT;
 
 static void enqueue(char *str){
-       struct s_queue *q;
-       /* TODO: wait if queue full */
-       /* TODO: synchronization */
-       q = (struct s_queue*)malloc( sizeof(struct s_queue) );
-       if ( q==NULL ){
-            perror("malloc s_queue - exiting");
-            exit(1);
-       }
+       int err;
 
-       pthread_mutex_lock(&q_lock);
+       err = pthread_mutex_lock(&q_lock);
+       assert_perror(err);
 
-       q->str = str;
-       q->next = NULL;
-       if ( queue != NULL ){
-           q->next = queue;
-           queue = q;
-       } else {
-           queue = q;
-       }
-       pthread_mutex_unlock(&q_lock);
-       pthread_cond_signal(&q_empty);
+       g_queue_push_head ( &queue, str );
+
+       err = pthread_mutex_unlock(&q_lock);
+       assert_perror(err);
+       err = pthread_cond_signal(&q_empty);
+       assert_perror(err);
 }
 
 static char* dequeue(){
-      char * str;
-      pthread_mutex_lock(&q_lock);
-      while ( queue == NULL ){
-          pthread_cond_wait(&q_empty,&q_lock);
+      char *str;
+      int err;
+      err = pthread_mutex_lock(&q_lock);
+      assert_perror(err);
+
+      while ( g_queue_is_empty(&queue) ){
+          err = pthread_cond_wait(&q_empty,&q_lock);
+          assert_perror(err);
       }
-      struct s_queue *q = queue;
-      queue = q->next;
-      pthread_mutex_unlock(&q_lock);
-      /* save str before free()!!! */
-      str = q->str;
-      free(q);
+      str =  g_queue_pop_tail(&queue);
+
+      err = pthread_mutex_unlock(&q_lock);
+      assert_perror(err);
       return str;
 }
 
@@ -92,6 +85,7 @@ static int count_words(char *line){
 static void *map_thread(void *arg){
 	pid_t  pid;
 	pthread_t  tid;
+        char *str;
 
 	pid = getpid();
 	tid = pthread_self();
@@ -99,8 +93,13 @@ static void *map_thread(void *arg){
 	printf("pid %lu, tid %lu\n",
 	       (unsigned long)pid, (unsigned long)tid);
 
-        *((int*)arg) = 1; /* TODO: pass number of words instead of 1 */
-
+      
+        while ( (str = dequeue()) != NULL ){
+//                printf("map_thread while str at 0x%p\n",str);
+                *((int*)arg) +=  count_words(str);
+                free(str);
+        }
+        printf("thread ending, counted %d\n", *((int*)arg));
         return NULL;
 }
 
@@ -187,7 +186,9 @@ int main(int argc, char **argv){
                 continue;
            }
            if ( n_threads ){
-              /* TODO put in queue */
+              // FIXME: avoid costly copy
+              enqueue( strdup(buf) );
+ //             printf("Buffer '%s' sent\n",buf);
            } else {
               total += count_words(buf);
            }
@@ -195,7 +196,11 @@ int main(int argc, char **argv){
 
     fclose(f);f=NULL;
  
-
+    /* send special ACK packet (NULL str) to signal end of queue */
+    for(i=0;i<n_threads;i++){
+//           printf("Enqueing NULL\n");
+           enqueue(NULL);
+    }
     /* join all threads */
     for(i=0;i<n_threads;i++){
           if ( pthread_join( threads[i],NULL) ){
@@ -203,6 +208,8 @@ int main(int argc, char **argv){
                return 1;
           }
     }
+    g_assert (g_queue_is_empty(&queue));
+
     /* compute total from sums (only in thread version) */
     for(i=0;i<n_threads;i++){
         total += sums[i];
@@ -211,6 +218,7 @@ int main(int argc, char **argv){
     if ( n_threads ){
 	    free(threads); threads = NULL;
             free(sums); sums = NULL;
+            // g_list_free( queue.head );
     }
 
 #ifdef MAPR_WC_MTRACE
