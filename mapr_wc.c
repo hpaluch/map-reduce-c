@@ -218,7 +218,10 @@ int main(int argc, char **argv){
     if ( n_threads ){
 	    free(threads); threads = NULL;
             free(sums); sums = NULL;
-            // g_list_free( queue.head );
+            if ( queue.head ){
+                 g_list_free( queue.head );
+                 queue.head = NULL; queue.tail = NULL;
+            }
     }
 
 #ifdef MAPR_WC_MTRACE

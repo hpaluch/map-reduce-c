@@ -13,6 +13,10 @@ Install glib2-devel:
 
 	yum install glib2-devel
 
+For valgrind leak detection:
+
+	yum install valgrind
+
 If you have no /var/cache/man/whatis file in system, try as root:
 
 	/etc/cron.daily/makewhatis.cron
@@ -22,9 +26,16 @@ Compile & Run
 
 	make run
 
-To diagnose memory leaks:
+To diagnose memory leaks try:
 
 	make mtrace_run
+
+or
+
+	make valgrind
+
+Bugs
+====
 
 Note: there are currently some leaks when running
 in threads mode (but outside this C code???)

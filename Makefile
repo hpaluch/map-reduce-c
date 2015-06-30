@@ -4,7 +4,7 @@ LDLIBS = `pkg-config glib-2.0 --libs-only-l`
 
 # use 'make run RUN_THREADS=X' to override
 # temporarily set to 0 (unless thread version is implemented)
-RUN_THREADS = 0
+RUN_THREADS = 1
 # input file to count words - use 'make run WORDS_FILE=my_file.txt' to override
 WORDS_FILE  = /var/cache/man/whatis
 
@@ -21,6 +21,10 @@ mtrace_mapr_wc.o : mapr_wc.c
 .PHONY: run
 run: mapr_wc
 	./mapr_wc $(WORDS_FILE) $(RUN_THREADS)
+
+.PHONY: valgrind
+valgrind: mapr_wc
+	valgrind --leak-check=full ./mapr_wc $(WORDS_FILE) $(RUN_THREADS)
 
 .PHONY: mtrace_run
 mtrace_run: mtrace_mapr_wc
