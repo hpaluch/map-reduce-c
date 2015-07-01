@@ -35,3 +35,9 @@ mtrace_run: mtrace_mapr_wc
 clean:
 	rm -f mapr_wc mtrace_mapr_wc *.o *.lst
 
+.PHONY: docs
+docs:
+	-rm -rf docs/api
+	mkdir -p docs/api
+	doxygen
+

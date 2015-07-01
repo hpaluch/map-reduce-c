@@ -1,5 +1,5 @@
-/* 
- * Map - Reduce WordCount using plain C
+/* *
+ * Map - Reduce WordCount using plain C.
  * Warning: this is just prototype (Proof of Concept)
  */
 
@@ -24,16 +24,37 @@
 #include <mcheck.h>
 #endif
 
+/**
+ * Mutex to protect queue
+ */
 pthread_mutex_t q_lock = PTHREAD_MUTEX_INITIALIZER;
+/**
+ * condition to signal when queue is empty
+ */
 pthread_cond_t  q_empty = PTHREAD_COND_INITIALIZER;
+/**
+ * condition to signal when queue is full
+ */
 pthread_cond_t  q_full = PTHREAD_COND_INITIALIZER;
 
+/**
+ * Limit on queue size
+ */
 #define MAPR_QUEUE_LIMIT 10
 
-/* we don't use GAsyncQueue, because it has no size limit */
+/**
+ * Queue - for communication.
+ * Main thread puts lines of words here. Slave thread(s) count words
+ * on these lines
+ */
 GQueue  queue = G_QUEUE_INIT;
 
-/* perror with printf-like interface */
+/**
+ * perror()  (print error) with printf-like interface.
+ *
+ * @param fmt format string - like printf()
+ * @param ... variable arguments - like pritnf()
+ */
 static void perrorfmt(const char *fmt, ...){
 	char buf[1024];
 	va_list ap;
@@ -43,6 +64,9 @@ static void perrorfmt(const char *fmt, ...){
 	perror(buf);
 }
 
+/**
+ * Put string line into queue - done by main thread
+ */
 static void enqueue(char *str){
        int err;
 
@@ -65,6 +89,9 @@ static void enqueue(char *str){
        assert_perror(err);
 }
 
+/**
+ * Remove string line from queue to process it for word counting.
+ */
 static char* dequeue(){
       char *str;
       int err;
@@ -87,6 +114,9 @@ static char* dequeue(){
       return str;
 }
 
+/**
+ * Show usage when wrong argument count
+ */
 static int usage(char *prog, char *msg){
     if(msg != NULL ){
        fprintf(stderr,"ERROR: %s\n",msg);
@@ -95,9 +125,11 @@ static int usage(char *prog, char *msg){
     return 1;
 }
 
-/*
+/**
  * count words on line string
  * This version is used for both single-threaded and multi-threaded counting
+ * @param line - line of text with words
+ * @return int - number words found in line
  */
 static int count_words(char *line){
        char *state;
@@ -110,6 +142,10 @@ static int count_words(char *line){
        return wc;
 }
 
+/**
+ * Slave thread - reads lines of text from queue and process it
+ * @param arg - used to return word count (retyped into int*)
+ */
 static void *map_thread(void *arg){
 	pid_t  pid;
 	pthread_t  tid;
@@ -131,6 +167,11 @@ static void *map_thread(void *arg){
         return NULL;
 }
 
+/**
+ * Removes trailing \\n or \\r characters.
+ * MODIFIES passed str
+ * @param str String to remove \\n and \\r
+ */
 static void trim_nl(char *str){
    char *p = NULL;
 
@@ -148,6 +189,9 @@ static void trim_nl(char *str){
    }
 }
 
+/**
+ * Main program entry
+ */
 int main(int argc, char **argv){
 
     char buf[1024];

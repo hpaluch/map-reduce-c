@@ -5,3 +5,5 @@ mtrace_mapr_wc
 *.lst
 .cproject
 .project
+*.bak
+docs/api/
