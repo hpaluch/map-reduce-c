@@ -3,3 +3,5 @@
 mapr_wc
 mtrace_mapr_wc
 *.lst
+.cproject
+.project

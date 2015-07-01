@@ -5,6 +5,8 @@
 
 #define _GNU_SOURCE
 #include <assert.h>
+#include <stdarg.h>
+
 
 #include<stdio.h>
 #include<errno.h>
@@ -30,6 +32,16 @@ pthread_cond_t  q_full = PTHREAD_COND_INITIALIZER;
 
 /* we don't use GAsyncQueue, because it has no size limit */
 GQueue  queue = G_QUEUE_INIT;
+
+/* perror with printf-like interface */
+static void perrorfmt(const char *fmt, ...){
+	char buf[1024];
+	va_list ap;
+	va_start(ap,fmt);
+	vsnprintf(buf,sizeof(buf)-1,fmt,ap);
+	va_end(ap);
+	perror(buf);
+}
 
 static void enqueue(char *str){
        int err;
@@ -166,12 +178,12 @@ int main(int argc, char **argv){
             printf("Using %d map threads\n",n_threads);
 	    threads = (pthread_t*)malloc( sizeof(pthread_t) * n_threads );
 	    if ( threads == NULL ){
-		 perror("malloc threads");
+		 perrorfmt("malloc(%d)",sizeof(pthread_t) * n_threads);
 		 return 1;
 	    }
             sums = (int*)malloc(sizeof(int)*n_threads);
             if ( sums == NULL ){
-		 perror("malloc sums");
+            	 perrorfmt("malloc(%d)",sizeof(int)*n_threads);
                  return 1;
             }
             
@@ -182,17 +194,14 @@ int main(int argc, char **argv){
     printf("Opening '%s' for reading\n",argv[1]);
     f=fopen(argv[1],"r");
     if ( f == NULL ){
-         /* TODO: show, which file failed to open */
-         perror("fopen");
+         perrorfmt("fopen(%s)",argv[1]);
          return 1;
     }
 
 
     for(i=0;i<n_threads;i++){
-          if ( pthread_create( threads+i,NULL,map_thread,sums+i) ){
-               perror("pthread_create");
-               return 1;
-          }
+          int err =  pthread_create( threads+i,NULL,map_thread,sums+i);
+          assert_perror(err);
     }
 
     total = 0;
@@ -219,10 +228,8 @@ int main(int argc, char **argv){
     }
     /* join all threads */
     for(i=0;i<n_threads;i++){
-          if ( pthread_join( threads[i],NULL) ){
-               perror("pthread_join");
-               return 1;
-          }
+          int err =  pthread_join( threads[i],NULL);
+          assert_perror(err);
     }
     g_assert (g_queue_is_empty(&queue));
 
@@ -232,7 +239,7 @@ int main(int argc, char **argv){
     }
     printf("There are total %d words\n",total);
     if ( n_threads ){
-	    free(threads); threads = NULL;
+	    	free(threads); threads = NULL;
             free(sums); sums = NULL;
             if ( queue.head ){
                  g_list_free( queue.head );
