@@ -1,7 +1,8 @@
 WordCount using Map Reduce (POSIX threads) in plain C
 =====================================================
 
-Warning: it is work in progress - unfinished!
+Proof of Concept - how to do Map/Reduce like processing (word count)
+using plain C with threads and queue.
 
 Setup
 =====
