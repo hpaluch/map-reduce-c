@@ -24,8 +24,11 @@
 
 pthread_mutex_t q_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  q_empty = PTHREAD_COND_INITIALIZER;
+pthread_cond_t  q_full = PTHREAD_COND_INITIALIZER;
 
+#define MAPR_QUEUE_LIMIT 10
 
+/* we don't use GAsyncQueue, because it has no size limit */
 GQueue  queue = G_QUEUE_INIT;
 
 static void enqueue(char *str){
@@ -34,10 +37,18 @@ static void enqueue(char *str){
        err = pthread_mutex_lock(&q_lock);
        assert_perror(err);
 
+      /* wait until queue size is < MAPR_QUEUE_LIMIT */
+      while ( g_queue_get_length (&queue) >= MAPR_QUEUE_LIMIT ){
+          err = pthread_cond_wait(&q_full,&q_lock);
+          assert_perror(err);
+      }
+ 
        g_queue_push_head ( &queue, str );
 
        err = pthread_mutex_unlock(&q_lock);
        assert_perror(err);
+
+       /* signal, that queue is no longer empty */
        err = pthread_cond_signal(&q_empty);
        assert_perror(err);
 }
@@ -48,6 +59,7 @@ static char* dequeue(){
       err = pthread_mutex_lock(&q_lock);
       assert_perror(err);
 
+      /* wait as long as queue is empty */
       while ( g_queue_is_empty(&queue) ){
           err = pthread_cond_wait(&q_empty,&q_lock);
           assert_perror(err);
@@ -55,6 +67,10 @@ static char* dequeue(){
       str =  g_queue_pop_tail(&queue);
 
       err = pthread_mutex_unlock(&q_lock);
+      assert_perror(err);
+
+      /* signal that queue is no longer full */
+      err = pthread_cond_signal(&q_full);
       assert_perror(err);
       return str;
 }
