@@ -31,6 +31,14 @@ or
 
 	make valgrind
 
+"API" docs
+==========
+Invoke:
+
+	make docs
+
+To generate docs/api/html/index.html files.
+
 Bugs
 ====
 
