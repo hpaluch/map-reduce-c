@@ -9,13 +9,9 @@ On CentOS 7 install:
 
 	yum install binutils gcc make
 
-Install glib2-devel:
+Install this project requirements:
 
-	yum install glib2-devel
-
-For valgrind leak detection:
-
-	yum install valgrind
+	yum install glib2-devel valgrind doxygen
 
 If you have no /var/cache/man/whatis file in system, try as root:
 
